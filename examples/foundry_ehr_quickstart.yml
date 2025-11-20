@@ -1,0 +1,95 @@
+# Palantir Foundry EHR Pipeline - Quick Start Configuration
+# This file contains minimal configuration to get started with Foundry integration
+
+---
+# 1. CONNECTION: Azure Event Hubs
+apiVersion: v1
+kind: DataConnection
+metadata:
+  name: ehr-eventhub-streaming
+spec:
+  connectionType: AZURE_EVENT_HUBS
+  authentication:
+    type: SHARED_ACCESS_KEY
+    connectionString: "${EVENTHUB_CONNECTION_STRING}"  # From .env
+  configuration:
+    namespace: "your-namespace"
+    eventHubName: "fhir-events"
+    consumerGroup: "foundry-consumer"
+  streaming:
+    enabled: true
+    checkpointLocation: "/checkpoints/ehr-stream"
+
+---
+# 2. DATASET: Bronze Layer (Raw FHIR)
+apiVersion: v1
+kind: Dataset
+metadata:
+  name: ehr_fhir_bronze
+spec:
+  source:
+    connectionRid: "ri.foundry.main.connection.ehr-eventhub-streaming"
+    format: JSON
+  storage:
+    type: DELTA
+    location: "/bronze/fhir_raw"
+    partitionBy: ["_eventDate"]
+  streaming:
+    enabled: true
+    trigger:
+      type: CONTINUOUS
+      interval: "30 seconds"
+  compliance:
+    classification: PHI
+    encryption: AES-256
+
+---
+# 3. DATASET: Silver Layer (Observations)
+apiVersion: v1
+kind: Dataset
+metadata:
+  name: ehr_observations_silver
+spec:
+  source:
+    type: DELTA_TABLE
+    path: "/silver/observations"
+  schema:
+    fields:
+      - {name: observation_id, type: STRING, nullable: false, primaryKey: true}
+      - {name: patient_id, type: STRING, nullable: false, indexed: true}
+      - {name: observation_code, type: STRING, nullable: false}
+      - {name: observation_display, type: STRING}
+      - {name: value_quantity, type: DOUBLE}
+      - {name: value_unit, type: STRING}
+      - {name: effective_datetime, type: TIMESTAMP, nullable: false}
+      - {name: status, type: STRING}
+      - {name: ingestion_timestamp, type: TIMESTAMP}
+  partitioning:
+    type: DATE
+    column: effective_datetime
+  compliance:
+    classification: PHI
+
+---
+# 4. PIPELINE: Streaming Build
+apiVersion: v1
+kind: PipelineBuild
+metadata:
+  name: ehr-foundry-pipeline
+spec:
+  schedule:
+    type: STREAMING
+  stages:
+    - name: bronze-ingestion
+      type: STREAMING
+      outputs: ["ehr_fhir_bronze"]
+      resources:
+        numWorkers: 2
+
+    - name: silver-transformation
+      type: STREAMING
+      dependsOn: ["bronze-ingestion"]
+      inputs: ["ehr_fhir_bronze"]
+      outputs: ["ehr_observations_silver"]
+      resources:
+        numWorkers: 4
