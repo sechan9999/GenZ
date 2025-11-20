@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+*.env
+!env.example
+
+# Logs
+*.log
+logs/
+
+# NVDRS Pipeline Specific
+# ======================
+
+# Data directories (contain sensitive NVDRS data)
+data/nvdrs/
+examples/nvdrs_data/
+*.csv
+*.parquet
+
+# Output files
+output/
+output/nvdrs/
+*.xlsx
+*.xls
+
+# Model caches (large pre-trained models)
+models/cache/
+.cache/
+spark-warehouse/
+
+# Temporary files
+temp/
+temp/nvdrs/
+tmp/
+
+# Spark
+derby.log
+metastore_db/
+spark-warehouse/
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Gen Z Agent specific
+gen_z_agent/output/
+gen_z_agent/temp/
+gen_z_agent/invoices/*.pdf
+gen_z_agent/invoices/*.html
+gen_z_agent/historical/*.csv

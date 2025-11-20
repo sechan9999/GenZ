@@ -1,0 +1,116 @@
+# NVDRS NLP Pipeline Requirements
+# Apache Spark + Spark NLP + Hugging Face for Clinical NER
+
+# ══════════════════════════════════════════════════════════════
+# Core Dependencies - Spark & NLP
+# ══════════════════════════════════════════════════════════════
+
+# Apache Spark (distributed computing)
+pyspark==3.5.0
+
+# Spark NLP (clinical NER and NLP processing)
+spark-nlp==5.2.0
+
+# Hugging Face Transformers (pre-trained models)
+transformers>=4.35.0
+torch>=2.1.0  # Required for transformers
+
+# ══════════════════════════════════════════════════════════════
+# Data Models & Validation
+# ══════════════════════════════════════════════════════════════
+
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# ══════════════════════════════════════════════════════════════
+# Data Processing
+# ══════════════════════════════════════════════════════════════
+
+pandas>=2.1.0
+numpy>=1.24.0
+
+# ══════════════════════════════════════════════════════════════
+# Excel Export
+# ══════════════════════════════════════════════════════════════
+
+openpyxl>=3.1.0  # Excel file handling
+xlsxwriter>=3.1.0  # Excel formatting
+
+# ══════════════════════════════════════════════════════════════
+# Utilities
+# ══════════════════════════════════════════════════════════════
+
+python-dotenv>=1.0.0  # Environment variable management
+tqdm>=4.66.0  # Progress bars
+python-dateutil>=2.8.2
+
+# ══════════════════════════════════════════════════════════════
+# Development Dependencies (optional)
+# ══════════════════════════════════════════════════════════════
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+
+# Code quality
+black>=23.11.0
+flake8>=6.1.0
+isort>=5.12.0
+mypy>=1.7.0
+
+# ══════════════════════════════════════════════════════════════
+# Databricks (if running on Azure Databricks)
+# ══════════════════════════════════════════════════════════════
+
+# Uncomment if using Databricks
+# databricks-cli>=0.18.0
+# databricks-connect>=13.0.0
+
+# ══════════════════════════════════════════════════════════════
+# Clinical/Biomedical NLP Models
+# ══════════════════════════════════════════════════════════════
+
+# Note: Pre-trained models are downloaded automatically by Spark NLP
+# Available models:
+#   - bert_token_classifier_ner_clinical (default)
+#   - ner_clinical
+#   - ner_posology (drug dosages)
+#   - ner_events_clinical
+#   - ner_jsl (John Snow Labs)
+
+# BioBERT / ClinicalBERT from Hugging Face
+# Downloaded automatically: emilyalsentzer/Bio_ClinicalBERT
+
+# ══════════════════════════════════════════════════════════════
+# Installation Instructions
+# ══════════════════════════════════════════════════════════════
+
+# 1. Create virtual environment:
+#    python -m venv venv
+#    source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 2. Install requirements:
+#    pip install -r requirements-nvdrs.txt
+
+# 3. Download Spark NLP models (automatic on first run):
+#    python -c "import sparknlp; sparknlp.start()"
+
+# 4. Test installation:
+#    python examples/nvdrs_example.py
+
+# ══════════════════════════════════════════════════════════════
+# System Requirements
+# ══════════════════════════════════════════════════════════════
+
+# - Python 3.8 or higher
+# - Java 8 or 11 (required for Spark)
+# - Minimum 8GB RAM (16GB recommended)
+# - 5GB disk space for models
+
+# Java Installation:
+# - Ubuntu/Debian: sudo apt-get install openjdk-11-jdk
+# - macOS: brew install openjdk@11
+# - Windows: Download from https://adoptium.net/
+
+# Verify Java: java -version
