@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Output files
+output/*.xlsx
+output/*.pdf
+output/*.md
+!output/README.md
+
+# Temporary files
+temp/
+*.tmp
+*.log
+
+# Large files
+*.pdf
+*.zip
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep directory structure
+!invoices/README.md
+!historical/README.md
+!output/README.md
+!utils/README.md
