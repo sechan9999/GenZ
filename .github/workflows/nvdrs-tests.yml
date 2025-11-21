@@ -1,0 +1,42 @@
+name: NVDRS Pipeline Tests
+
+on:
+  push:
+    branches: [ main, develop, claude/* ]
+    paths:
+      - 'nvdrs_pipeline/**'
+      - 'tests/test_nvdrs/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'nvdrs_pipeline/**'
+      - 'tests/test_nvdrs/**'
+
+jobs:
+  test-nvdrs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-nvdrs.txt
+        pip install -r requirements-dev.txt
+
+    - name: Run NVDRS pipeline tests
+      run: |
+        pytest tests/test_nvdrs -v --cov=nvdrs_pipeline --cov-report=xml
+
+    - name: Upload NVDRS coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: nvdrs
+        name: codecov-nvdrs
