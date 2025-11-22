@@ -15,3 +15,11 @@ flake8==6.1.0
 # Healthcare automation dependencies
 pydantic>=2.0.0
 cryptography>=41.0.0
+
+# RAG (Retrieval-Augmented Generation)
+chromadb==0.4.15
+sentence-transformers==2.2.2
+rank-bm25==0.2.2
+
+# Additional utilities
+scipy>=1.11.0
