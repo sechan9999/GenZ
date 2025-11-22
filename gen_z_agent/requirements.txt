@@ -11,3 +11,7 @@ numpy==1.26.3
 pytest==7.4.3
 black==23.12.1
 flake8==6.1.0
+
+# Healthcare automation dependencies
+pydantic>=2.0.0
+cryptography>=41.0.0
