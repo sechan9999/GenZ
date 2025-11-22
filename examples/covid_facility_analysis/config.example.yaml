@@ -1,0 +1,112 @@
+# VA COVID-19 Facility Data Analysis Pipeline Configuration
+# Copy this file to config.yaml and customize for your environment
+
+# ============================================================================
+# INPUT DATA FILES
+# ============================================================================
+
+# Path to EHR (Electronic Health Records) CSV file
+ehr_file: "data/ehr_data_20210115.csv"
+
+# Path to staffing roster CSV file
+staffing_file: "data/staffing_roster_20210115.csv"
+
+# Path to PPE inventory CSV file
+ppe_file: "data/ppe_inventory_20210115.csv"
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+
+# Directory for all output files
+output_dir: "output"
+
+# Path to save merged data CSV (optional, defaults to output/merged_data.csv)
+merged_output: "output/merged_facility_data_20210115.csv"
+
+# ============================================================================
+# ETL PARAMETERS
+# ============================================================================
+
+# Fuzzy matching threshold for facility name matching (0-100)
+# Higher values require closer matches
+# Recommended: 85-90 for strict matching, 75-85 for lenient matching
+fuzzy_match_threshold: 85
+
+# Date tolerance in days for matching records (0 = exact date match)
+# Use 1-2 if data sources may have slight date misalignments
+date_tolerance_days: 0
+
+# ============================================================================
+# ANALYSIS PARAMETERS
+# ============================================================================
+
+# Outbreak Detection
+# ------------------
+# Number of standard deviations above mean to flag as outbreak
+outbreak_threshold_std: 2.0
+
+# Minimum absolute case count to flag as outbreak
+outbreak_min_cases: 10
+
+# Capacity Constraints
+# --------------------
+# Bed occupancy rate threshold for alerts (0.0 to 1.0)
+# Example: 0.85 = 85% occupancy
+occupancy_threshold: 0.85
+
+# ICU occupancy threshold for critical alerts
+icu_threshold: 0.90
+
+# ============================================================================
+# REPORTING OPTIONS
+# ============================================================================
+
+# Generate PowerPoint deck (true/false)
+generate_powerpoint: true
+
+# Generate Excel workbook (true/false)
+generate_excel: true
+
+# Generate standalone charts (true/false)
+generate_charts: true
+
+# Report title prefix
+report_title_prefix: "VA COVID-19 Response"
+
+# ============================================================================
+# DATA QUALITY SETTINGS
+# ============================================================================
+
+# Z-score threshold for anomaly detection
+anomaly_z_threshold: 3.0
+
+# Minimum data completeness score to include in analysis (0.0 to 1.0)
+# Example: 0.7 = require at least 70% of fields populated
+min_data_completeness: 0.7
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+# Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_level: "INFO"
+
+# Log file path
+log_file: "covid_analysis.log"
+
+# ============================================================================
+# ADVANCED OPTIONS
+# ============================================================================
+
+# Number of days for rolling averages in time series
+rolling_window_days: 7
+
+# Enable/disable specific analyses
+enable_correlation_analysis: true
+enable_facility_type_comparison: true
+enable_outbreak_detection: true
+enable_capacity_analysis: true
+
+# Statistical significance threshold for tests
+p_value_threshold: 0.05
