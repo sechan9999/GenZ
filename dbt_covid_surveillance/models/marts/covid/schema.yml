@@ -1,0 +1,281 @@
+version: 2
+
+models:
+  - name: dim_patient
+    description: >
+      Patient dimension table with demographics standardized to CDC categories.
+      Contains PHI - use appropriate access controls.
+    meta:
+      contains_phi: true
+    columns:
+      - name: pat_id
+        description: Unique patient identifier (primary key)
+        tests:
+          - not_null
+          - unique
+
+      - name: patient_sk
+        description: Surrogate key (hashed pat_id for joins)
+        tests:
+          - not_null
+          - unique
+
+      - name: sex
+        description: Standardized sex
+        tests:
+          - accepted_values:
+              values: ['Male', 'Female', 'Unknown', 'Other']
+
+      - name: race
+        description: CDC-standardized race category
+        tests:
+          - accepted_values:
+              values: [
+                'White',
+                'Black or African American',
+                'Asian',
+                'Native Hawaiian or Other Pacific Islander',
+                'American Indian or Alaska Native',
+                'Multiple Races',
+                'Other',
+                'Unknown'
+              ]
+
+      - name: ethnicity
+        description: CDC-standardized ethnicity
+        tests:
+          - accepted_values:
+              values: ['Hispanic or Latino', 'Not Hispanic or Latino', 'Unknown']
+
+  - name: dim_assay_interpretation_rules
+    description: >
+      Business rules for interpreting COVID test results.
+      Tracks CT cutoffs, target requirements, and regulatory information.
+      Uses SCD Type 2 pattern via snapshots.
+    columns:
+      - name: rule_sk
+        description: Surrogate key (primary key)
+        tests:
+          - not_null
+          - unique
+
+      - name: assay_name
+        description: Name of the COVID test assay
+        tests:
+          - not_null
+
+      - name: is_current
+        description: Flag indicating if rule is currently active
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+
+  - name: covid_tests
+    description: >
+      Comprehensive COVID test results fact table with interpretation,
+      demographics, and quality metrics. Primary table for surveillance analytics.
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "targets_detected <= targets_tested"
+          config:
+            severity: error
+      - date_sequence:
+          earlier_date: specimen_collected_dttm
+          later_date: result_released_dttm
+
+    columns:
+      - name: accession_number
+        description: Unique specimen identifier (primary key)
+        tests:
+          - not_null
+          - unique
+
+      - name: test_sk
+        description: Surrogate key for efficient joins
+        tests:
+          - not_null
+          - unique
+
+      - name: test_event_date
+        description: Primary partition key (collection date or result date)
+        tests:
+          - not_null
+          - dbt_utils.not_constant
+
+      - name: pat_id
+        description: Patient identifier
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_patient')
+              field: pat_id
+
+      - name: final_result
+        description: Interpreted test result (Detected/Not Detected/Inconclusive)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Detected', 'Not Detected', 'Inconclusive']
+
+      - name: ct_min
+        description: Minimum CT value across all targets
+        tests:
+          - valid_ct_value_range:
+              min_value: 0
+              max_value: 50
+
+      - name: age_at_test
+        description: Patient age at time of test
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 120
+
+      - name: age_group_cdc
+        description: CDC age groupings for reporting
+        tests:
+          - accepted_values:
+              values: ['0-17', '18-29', '30-39', '40-49', '50-64', '65+', 'Unknown']
+
+      - name: county_fips
+        description: 5-digit FIPS code for county
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.90  # 90% of records should have county
+
+  - name: covid_variants
+    description: >
+      SARS-CoV-2 variant surveillance table linking sequencing results
+      to test data. Includes lineage assignments, mutation profiles,
+      and WHO classifications.
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "genome_coverage >= 80 AND n_content_percent <= 10"
+          config:
+            severity: warn
+            where: "passes_genome_qc = TRUE"
+
+    columns:
+      - name: accession_number
+        description: Links to covid_tests table
+        tests:
+          - not_null
+          - relationships:
+              to: ref('covid_tests')
+              field: accession_number
+              config:
+                severity: warn  # Not all tests are sequenced
+
+      - name: pangolin_lineage
+        description: Pango lineage designation (e.g., BA.2.86.1)
+        tests:
+          - not_null
+
+      - name: genome_coverage
+        description: Percentage of genome covered by sequencing
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 80
+              max_value: 100
+              inclusive: true
+
+      - name: n_content_percent
+        description: Percentage of ambiguous bases (N) in consensus
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10
+              inclusive: true
+
+      - name: who_variant
+        description: WHO variant classification
+        tests:
+          - accepted_values:
+              values: [
+                'Alpha', 'Beta', 'Gamma', 'Delta', 'Omicron',
+                'Epsilon', 'Eta', 'Iota', 'Kappa', 'Lambda', 'Mu',
+                'Other'
+              ]
+
+      - name: total_unique_mutations
+        description: Count of unique mutations in this sequence
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 200  # Typical range is 20-80
+
+  - name: covid_lineage_summary
+    description: >
+      Weekly lineage proportions aggregated by geography for CDC submission.
+      Calculates epi weeks, prevalence percentages, and ranks lineages.
+      Meets CDC minimum reporting thresholds (≥5 sequences per week/geography).
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "percent_lineage <= 100"
+      - dbt_utils.expression_is_true:
+          expression: "sequences_count >= 5"
+          config:
+            where: "meets_cdc_threshold = TRUE"
+
+    columns:
+      - name: epi_week
+        description: Saturday date of the MMWR epidemiological week
+        tests:
+          - not_null
+
+      - name: geography_level
+        description: Geographic aggregation level
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['county', 'state', 'national']
+
+      - name: geography_value
+        description: FIPS code (county), state abbrev, or 'USA'
+        tests:
+          - not_null
+
+      - name: pangolin_lineage
+        description: Pango lineage being reported
+        tests:
+          - not_null
+
+      - name: sequences_count
+        description: Number of sequences for this lineage/week/geography
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 5  # CDC minimum
+              max_value: 100000
+
+      - name: percent_lineage
+        description: Percentage of sequences for this lineage
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: true
+
+      - name: meets_cdc_threshold
+        description: Flag indicating record meets CDC reporting minimum
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true]  # Only output records that meet threshold
+
+# Custom data quality tests
+tests:
+  - name: assert_ct_values_consistent
+    description: CT values should be consistent (min <= mean <= max)
+    config:
+      severity: error
+
+  - name: assert_lineage_consistency
+    description: Pangolin and Nextclade lineages should be compatible
+    config:
+      severity: warn
