@@ -1,0 +1,142 @@
+# ═══════════════════════════════════════════════════════════════════
+# ETL Quality Validation Docker Compose Configuration
+# Quick deployment for quality validation suite
+# ═══════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  etl-quality-validator:
+    build:
+      context: .
+      dockerfile: Dockerfile.quality
+    container_name: etl_quality_validator
+    image: genz-agent/etl-quality:latest
+
+    environment:
+      # Project Configuration
+      - PROJECT_NAME=ETL_Quality_Validation
+      - ENVIRONMENT=production
+
+      # Thresholds
+      - THRESHOLD_NULL_PCT=5
+      - THRESHOLD_MEAN_CHG=10
+      - THRESHOLD_ROW_CHG=20
+      - QUALITY_SCORE_THRESHOLD=80
+
+      # Logging
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+
+    volumes:
+      # Data directories
+      - ./data/pre_ingestion:/app/data/pre_ingestion:ro
+      - ./data/post_ingestion:/app/data/post_ingestion:ro
+
+      # Output directory
+      - ./gen_z_agent/output/quality_reports:/app/output/quality_reports
+
+      # Great Expectations context
+      - ./gen_z_agent/ge_context:/app/ge_context
+
+      # Logs
+      - ./logs:/app/logs
+
+      # Configuration (optional)
+      - ./.env:/app/.env:ro
+
+    networks:
+      - quality_network
+
+    restart: unless-stopped
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import great_expectations; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Database for storing validation results
+  quality-db:
+    image: postgres:15-alpine
+    container_name: etl_quality_db
+    environment:
+      - POSTGRES_DB=quality_validation
+      - POSTGRES_USER=quality_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+    volumes:
+      - quality_db_data:/var/lib/postgresql/data
+    networks:
+      - quality_network
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+
+  # Optional: Jupyter for interactive analysis
+  jupyter-lab:
+    build:
+      context: .
+      dockerfile: Dockerfile.quality
+    container_name: etl_quality_jupyter
+    command: >
+      jupyter lab
+      --ip=0.0.0.0
+      --port=8888
+      --no-browser
+      --allow-root
+      --NotebookApp.token=''
+      --NotebookApp.password=''
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/app/data
+      - ./gen_z_agent:/app/gen_z_agent
+      - ./notebooks:/app/notebooks
+    networks:
+      - quality_network
+    restart: unless-stopped
+
+networks:
+  quality_network:
+    driver: bridge
+
+volumes:
+  quality_db_data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════
+# Usage Instructions:
+# ═══════════════════════════════════════════════════════════════════
+#
+# 1. Build and start services:
+#    docker-compose -f docker-compose.quality.yml up -d
+#
+# 2. View logs:
+#    docker-compose -f docker-compose.quality.yml logs -f etl-quality-validator
+#
+# 3. Run quality validation:
+#    docker-compose -f docker-compose.quality.yml exec etl-quality-validator \
+#      python -m gen_z_agent.etl_quality_validator
+#
+# 4. Access Jupyter Lab (if enabled):
+#    http://localhost:8888
+#
+# 5. Stop services:
+#    docker-compose -f docker-compose.quality.yml down
+#
+# 6. Clean up (including volumes):
+#    docker-compose -f docker-compose.quality.yml down -v
+#
+# ═══════════════════════════════════════════════════════════════════
