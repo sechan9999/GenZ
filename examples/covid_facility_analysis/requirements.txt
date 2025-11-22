@@ -1,0 +1,44 @@
+# COVID-19 Facility Data Analysis Pipeline - Python Dependencies
+
+# Core Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Data Validation
+pydantic>=2.0.0
+
+# Fuzzy String Matching (for deduplication)
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.21.0
+
+# Statistical Analysis
+scipy>=1.11.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# PowerPoint Generation
+python-pptx>=0.6.21
+
+# Excel Processing
+openpyxl>=3.1.0
+xlsxwriter>=3.1.0
+
+# Configuration
+PyYAML>=6.0
+
+# Utilities
+python-dateutil>=2.8.0
+
+# Optional: For advanced visualizations
+plotly>=5.14.0  # Interactive dashboards
+
+# Optional: For PDF report generation
+reportlab>=4.0.0
+
+# Development Dependencies (for testing)
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+flake8>=6.1.0
