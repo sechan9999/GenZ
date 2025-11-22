@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Gen Z Clinical Workflow Assistant
+  # ═══════════════════════════════════════════════════════════════════════════
+  genz-clinical:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: genz-clinical-assistant:2.0.0
+    container_name: genz-clinical
+    restart: unless-stopped
+
+    # Environment variables (use .env file in production)
+    env_file:
+      - ./gen_z_agent/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - AGENT_VERBOSE=true
+
+    # Volumes for persistent storage
+    volumes:
+      # HIPAA-compliant data storage (encrypted volume recommended)
+      - genz-healthcare-data:/app/gen_z_agent/healthcare
+      # Configuration (read-only)
+      - ./gen_z_agent/.env:/app/gen_z_agent/.env:ro
+      # Logs
+      - genz-logs:/app/gen_z_agent/logs
+
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false  # Set to true if possible
+
+    # Networking
+    ports:
+      - "127.0.0.1:8000:8000"  # Only expose on localhost
+    networks:
+      - genz-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "from gen_z_agent.clinical_rag import get_rag_system; rag = get_rag_system(); print('Healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # PostgreSQL (for metadata storage)
+  # ═══════════════════════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:15-alpine
+    container_name: genz-postgres
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_DB=genz_clinical
+      - POSTGRES_USER=genz_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+    secrets:
+      - postgres_password
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    # Security
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      - genz-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genz_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Redis (for caching)
+  # ═══════════════════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: genz-redis
+    restart: unless-stopped
+
+    command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 1gb --maxmemory-policy allkeys-lru
+
+    volumes:
+      - redis-data:/data
+
+    networks:
+      - genz-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Volumes
+# ═══════════════════════════════════════════════════════════════════════════
+volumes:
+  genz-healthcare-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /secure/healthcare-data  # Change to your secure storage path
+
+  genz-logs:
+    driver: local
+
+  postgres-data:
+    driver: local
+
+  redis-data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Networks
+# ═══════════════════════════════════════════════════════════════════════════
+networks:
+  genz-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Secrets (for production, use Docker secrets or external secret manager)
+# ═══════════════════════════════════════════════════════════════════════════
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt

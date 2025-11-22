@@ -1,0 +1,184 @@
+---
+# ConfigMap for environment configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: genz-config
+  namespace: healthcare-ai
+data:
+  .env: |
+    # Model Configuration
+    CLAUDE_MODEL=claude-sonnet-4-5-20250929
+    CLAUDE_TEMPERATURE=0.1
+    CLAUDE_MAX_TOKENS=8192
+
+    # Application Settings
+    LOG_LEVEL=INFO
+    AGENT_VERBOSE=true
+    PRODUCTION=true
+
+    # HIPAA Compliance
+    PHI_CLASSIFICATION_LEVEL=RESTRICTED
+    AUDIT_LOG_RETENTION_YEARS=7
+
+    # Directories (container paths)
+    OUTPUT_DIR=/app/gen_z_agent/healthcare/clinical_reports
+    TEMP_DIR=/app/gen_z_agent/healthcare/phi_temp
+
+---
+# Secrets (template - DO NOT commit actual secrets)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: genz-secrets
+  namespace: healthcare-ai
+type: Opaque
+stringData:
+  # IMPORTANT: Replace with actual secrets using kubectl or external secret manager
+  anthropic-api-key: "REPLACE_WITH_ACTUAL_KEY"
+  phi-encryption-key: "REPLACE_WITH_ACTUAL_KEY"
+  redis-password: "REPLACE_WITH_ACTUAL_PASSWORD"
+  postgres-password: "REPLACE_WITH_ACTUAL_PASSWORD"
+
+---
+# Persistent Volume Claim for healthcare data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: genz-healthcare-pvc
+  namespace: healthcare-ai
+  labels:
+    app: genz-clinical
+spec:
+  accessModes:
+  - ReadWriteMany  # RWX for multi-pod access
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: encrypted-ssd  # Use encrypted storage class
+  volumeMode: Filesystem
+
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: genz-clinical-sa
+  namespace: healthcare-ai
+  labels:
+    app: genz-clinical
+
+---
+# RBAC Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: genz-clinical-role
+  namespace: healthcare-ai
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+
+---
+# RBAC RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: genz-clinical-rolebinding
+  namespace: healthcare-ai
+subjects:
+- kind: ServiceAccount
+  name: genz-clinical-sa
+  namespace: healthcare-ai
+roleRef:
+  kind: Role
+  name: genz-clinical-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Network Policy (restrict ingress)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: genz-clinical-netpol
+  namespace: healthcare-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: genz-clinical
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS for Anthropic API
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+
+---
+# HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: genz-clinical-hpa
+  namespace: healthcare-ai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: genz-clinical-assistant
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: genz-clinical-pdb
+  namespace: healthcare-ai
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: genz-clinical
