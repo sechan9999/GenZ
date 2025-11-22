@@ -1,0 +1,44 @@
+# Core ML Libraries
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# AutoML
+flaml>=2.1.0
+
+# Gradient Boosting
+xgboost>=2.0.0
+lightgbm>=4.0.0
+catboost>=1.2.0
+
+# Explainability
+shap>=0.43.0
+lime>=0.2.0.1
+
+# Causal Inference
+econml>=0.14.0
+dowhy>=0.10.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Production Deployment
+onnx>=1.14.0
+onnxruntime>=1.15.0
+skl2onnx>=1.15.0
+onnxmltools>=1.11.0
+
+# Statistics
+scipy>=1.11.0
+statsmodels>=0.14.0
+
+# Utilities
+tqdm>=4.65.0
+joblib>=1.3.0
+python-dotenv>=1.0.0
+
+# Optional: Deep Learning (for advanced use cases)
+# torch>=2.0.0
+# tensorflow>=2.13.0
