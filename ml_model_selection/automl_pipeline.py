@@ -185,14 +185,17 @@ class AutoMLPipeline:
         print(f"Best Estimator: {self.automl.best_estimator}")
         print(f"Best Config: {self.automl.best_config}")
         print(f"Best {self.metric}: {self.automl.best_loss:.6f}")
-        print(f"Training Time: {self.automl.time:.2f}s")
+
+        # Get training time safely
+        training_time = getattr(self.automl, 'time', getattr(self.automl, 'wall_clock_time', 0))
+        print(f"Training Time: {training_time:.2f}s")
 
         # Store results
         self.results['automl_results'] = {
             'best_estimator': self.automl.best_estimator,
             'best_config': self.automl.best_config,
             'best_loss': self.automl.best_loss,
-            'time': self.automl.time
+            'time': training_time
         }
 
         # Build ensemble if requested
