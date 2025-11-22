@@ -1,0 +1,175 @@
+version: 2
+
+sources:
+  - name: raw_lims
+    description: Raw laboratory information management system data
+    database: "{{ env_var('LIMS_DATABASE', 'raw_data') }}"
+    schema: lims
+    tables:
+      - name: laboratory_results
+        description: Raw LIMS test results from COVID-19 testing platforms
+        columns:
+          - name: accession_number
+            description: Unique specimen identifier
+            tests:
+              - not_null
+              - unique
+
+  - name: raw_sequencing
+    description: Raw genomic sequencing analysis results
+    database: "{{ env_var('SEQUENCING_DATABASE', 'raw_data') }}"
+    schema: sequencing
+    tables:
+      - name: sequence_analysis_results
+        description: SARS-CoV-2 whole genome sequencing results with lineage assignments
+        columns:
+          - name: accession_number
+            description: Links to laboratory_results.accession_number
+            tests:
+              - not_null
+
+  - name: raw_ehr
+    description: Raw electronic health record data
+    database: "{{ env_var('EHR_DATABASE', 'raw_data') }}"
+    schema: ehr
+    tables:
+      - name: patient_demographics
+        description: Patient demographic information (contains PHI)
+        meta:
+          contains_phi: true
+        columns:
+          - name: pat_id
+            description: Unique patient identifier
+            tests:
+              - not_null
+              - unique
+
+models:
+  - name: stg_lims_results
+    description: >
+      Cleaned and standardized LIMS results for COVID-19 testing.
+      Includes PCR, antigen, and molecular tests with CT values and qualitative results.
+    columns:
+      - name: accession_number
+        description: Unique specimen identifier (primary key)
+        tests:
+          - not_null
+          - unique
+
+      - name: pat_id
+        description: Patient identifier linking to demographics
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: pat_id
+
+      - name: ct_value
+        description: Cycle threshold value for PCR tests (lower = more viral RNA)
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 50
+              where: "ct_value IS NOT NULL"
+
+      - name: qualitative_result
+        description: Qualitative test result
+        tests:
+          - accepted_values:
+              values: ['POSITIVE', 'NEGATIVE', 'INDETERMINATE', 'INCONCLUSIVE']
+
+      - name: target
+        description: PCR target gene (N_GENE, ORF1AB, E_GENE, etc.)
+
+      - name: result_status
+        description: Result finalization status
+        tests:
+          - accepted_values:
+              values: ['FINAL', 'CORRECTED']
+
+      - name: qc_passed
+        description: Quality control flag
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
+
+  - name: stg_sequencing_results
+    description: >
+      Cleaned genomic sequencing results with lineage assignments from Pangolin and Nextclade.
+      Includes mutation profiles and quality metrics.
+    columns:
+      - name: accession_number
+        description: Links to LIMS results
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_lims_results')
+              field: accession_number
+
+      - name: pangolin_lineage
+        description: Pango lineage assignment (e.g., BA.2.86.1)
+        tests:
+          - not_null
+
+      - name: genome_coverage
+        description: Percentage of genome covered by sequencing
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+      - name: n_content_percent
+        description: Percentage of ambiguous bases (N) in consensus
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+      - name: passes_genome_qc
+        description: Flag indicating sequence passes quality thresholds
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true]  # Staging should only include passing sequences
+
+  - name: stg_patient
+    description: >
+      Cleaned patient demographics with CDC-standardized race/ethnicity categories.
+      Contains PHI - use with appropriate access controls.
+    meta:
+      contains_phi: true
+    columns:
+      - name: pat_id
+        description: Unique patient identifier (primary key)
+        tests:
+          - not_null
+          - unique
+
+      - name: patient_sk
+        description: Surrogate key (hashed pat_id)
+        tests:
+          - not_null
+          - unique
+
+      - name: sex_standardized
+        description: Standardized sex category
+        tests:
+          - accepted_values:
+              values: ['Male', 'Female', 'Unknown', 'Other']
+
+      - name: race_cdc_category
+        description: CDC-standardized race category
+        tests:
+          - not_null
+
+      - name: ethnicity_cdc_category
+        description: CDC-standardized ethnicity category
+        tests:
+          - not_null
+
+      - name: county_fips
+        description: 5-digit county FIPS code
+        tests:
+          - dbt_utils.not_null_proportion:
+              at_least: 0.90  # Expect 90% of records to have county

@@ -1,0 +1,129 @@
+# dbt_project.yml
+# Production-grade configuration for COVID-19 surveillance dbt project
+# Used at scale by VA + state DOH systems
+
+name: 'covid_surveillance'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'covid_surveillance'
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+  - "logs"
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+models:
+  covid_surveillance:
+    # Apply to all models in the project
+    +materialized: table
+    +on_schema_change: "sync_all_columns"
+
+    # Staging models - incremental loads from source systems
+    staging:
+      +tags: ['staging']
+      +materialized: view  # Views for staging, cheap to rebuild
+      +schema: staging
+
+    # Intermediate models - business logic transformations
+    intermediate:
+      +tags: ['intermediate']
+      +materialized: ephemeral  # Don't persist, inline CTEs
+      +schema: intermediate
+
+    # Marts models - final business-facing tables
+    marts:
+      +tags: ['marts']
+      +materialized: table
+      +schema: marts
+
+      covid:
+        +tags: ['covid', 'daily']
+        +schema: covid_marts
+
+        # Specific model configurations
+        covid_tests:
+          +materialized: incremental
+          +unique_key: accession_number
+          +on_schema_change: sync_all_columns
+          +partition_by:
+            field: test_event_date
+            data_type: date
+            granularity: day
+
+        covid_variants:
+          +materialized: table
+          +tags: ['variants', 'genomics']
+
+        covid_lineage_summary:
+          +materialized: incremental
+          +unique_key: ['epi_week', 'county_fips', 'pangolin_lineage']
+          +tags: ['cdc_submission']
+
+# Seeds configuration
+seeds:
+  covid_surveillance:
+    +schema: reference_data
+    +tags: ['seeds']
+    +quote_columns: false
+
+    assay_rules:
+      +column_types:
+        assay_name: varchar(200)
+        reagent_lot: varchar(50)
+        ct_cutoff_n: numeric(5,2)
+        ct_cutoff_orf: numeric(5,2)
+        effective_start_date: date
+        effective_end_date: date
+
+# Snapshots configuration
+snapshots:
+  covid_surveillance:
+    +target_schema: snapshots
+    +unique_key: id
+    +strategy: timestamp
+    +updated_at: updated_at
+
+# Documentation
+docs-paths: ["docs"]
+
+# Query comments
+query-comment:
+  comment: "dbt_covid_surveillance | {{ node.unique_id }} | {{ run_started_at }}"
+  append: true
+
+# Dispatch configuration for cross-database macros
+dispatch:
+  - macro_namespace: dbt_utils
+    search_order: ['covid_surveillance', 'dbt_utils']
+
+# Tests
+tests:
+  covid_surveillance:
+    +store_failures: true
+    +schema: test_failures
+
+# Variables
+vars:
+  # Date range for incremental loads
+  start_date: '2020-01-01'
+
+  # CDC reporting thresholds
+  cdc_minimum_sequences: 5
+
+  # Assay interpretation defaults
+  default_ct_cutoff: 40
+
+  # Epi week start day (0 = Sunday, CDC standard)
+  epi_week_start_day: 0

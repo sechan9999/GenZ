@@ -1,0 +1,55 @@
+# profiles.yml.example
+# Copy this to ~/.dbt/profiles.yml and configure for your environment
+
+covid_surveillance:
+  target: dev
+  outputs:
+
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'DBT_DEV_ROLE') }}"
+      database: COVID_SURVEILLANCE_DEV
+      warehouse: DBT_DEV_WH
+      schema: dbt_{{ env_var('USER') }}
+      threads: 4
+      client_session_keep_alive: False
+      query_tag: dbt_dev
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: DBT_PROD_ROLE
+      database: COVID_SURVEILLANCE_PROD
+      warehouse: DBT_PROD_WH
+      schema: analytics
+      threads: 8
+      client_session_keep_alive: False
+      query_tag: dbt_prod
+
+    # Alternative: PostgreSQL configuration
+    dev_postgres:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST') }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: 5432
+      dbname: covid_surveillance_dev
+      schema: dbt_{{ env_var('USER') }}
+      threads: 4
+
+    # Alternative: BigQuery configuration
+    dev_bigquery:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: covid_surveillance_dev
+      threads: 4
+      keyfile: "{{ env_var('GCP_KEYFILE_PATH') }}"
+      location: US
+      priority: interactive
+      timeout_seconds: 300
