@@ -88,3 +88,11 @@ gen_z_agent/temp/
 gen_z_agent/invoices/*.pdf
 gen_z_agent/invoices/*.html
 gen_z_agent/historical/*.csv
+
+# Data Science Client Project
+data_science_client_project/output/
+
+# ML Training artifacts
+catboost_info/
+mlruns/
+*.ckpt
