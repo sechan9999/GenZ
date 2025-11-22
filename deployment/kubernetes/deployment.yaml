@@ -1,0 +1,187 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: genz-clinical-assistant
+  namespace: healthcare-ai
+  labels:
+    app: genz-clinical
+    version: v2.0.0
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: genz-clinical
+  template:
+    metadata:
+      labels:
+        app: genz-clinical
+        version: v2.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Service account
+      serviceAccountName: genz-clinical-sa
+
+      # Init containers
+      initContainers:
+      - name: init-rag
+        image: genz-clinical-assistant:2.0.0
+        command: ['python', '-c', 'from gen_z_agent.clinical_rag import get_rag_system; rag = get_rag_system(); print("RAG initialized")']
+        env:
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: genz-secrets
+              key: anthropic-api-key
+        volumeMounts:
+        - name: healthcare-data
+          mountPath: /app/gen_z_agent/healthcare
+
+      # Main container
+      containers:
+      - name: genz-clinical
+        image: genz-clinical-assistant:2.0.0
+        imagePullPolicy: IfNotPresent
+
+        # Resource limits
+        resources:
+          limits:
+            cpu: "4000m"
+            memory: "8Gi"
+          requests:
+            cpu: "2000m"
+            memory: "4Gi"
+
+        # Environment variables
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: AGENT_VERBOSE
+          value: "true"
+        - name: PRODUCTION
+          value: "true"
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: genz-secrets
+              key: anthropic-api-key
+        - name: PHI_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: genz-secrets
+              key: phi-encryption-key
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: genz-secrets
+              key: redis-password
+
+        # Ports
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+
+        # Volume mounts
+        volumeMounts:
+        - name: healthcare-data
+          mountPath: /app/gen_z_agent/healthcare
+        - name: config
+          mountPath: /app/gen_z_agent/.env
+          subPath: .env
+          readOnly: true
+
+        # Health checks
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "from gen_z_agent.clinical_rag import get_rag_system; rag = get_rag_system(); print('Healthy')"
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "from gen_z_agent.clinical_rag import get_rag_system; rag = get_rag_system(); print('Ready')"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+
+      # Volumes
+      volumes:
+      - name: healthcare-data
+        persistentVolumeClaim:
+          claimName: genz-healthcare-pvc
+      - name: config
+        configMap:
+          name: genz-config
+
+      # Node affinity (prefer nodes with SSD)
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - m5.2xlarge
+                - m5.4xlarge
+        # Pod anti-affinity (spread across nodes)
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - genz-clinical
+              topologyKey: kubernetes.io/hostname
+
+      # Tolerations
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "healthcare-ai"
+        effect: "NoSchedule"
