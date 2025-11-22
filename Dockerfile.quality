@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════════
+# ETL Quality Validation Docker Image
+# Containerized suite for data quality validation with Great Expectations
+# ═══════════════════════════════════════════════════════════════════
+
+FROM python:3.9-slim
+
+LABEL maintainer="Gen Z Agent Team"
+LABEL description="ETL Quality Validation Suite with Great Expectations"
+LABEL version="1.0.0"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better layer caching
+COPY requirements-quality.txt /app/
+
+# Install Python dependencies
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements-quality.txt
+
+# Copy application code
+COPY gen_z_agent/ /app/gen_z_agent/
+COPY gen_z_agent/etl_quality_validator.py /app/
+
+# Create necessary directories
+RUN mkdir -p /app/data/pre_ingestion \
+    /app/data/post_ingestion \
+    /app/output/quality_reports \
+    /app/ge_context \
+    /app/logs
+
+# Set permissions
+RUN chmod -R 755 /app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import great_expectations; print('OK')" || exit 1
+
+# Default command
+CMD ["python", "-m", "gen_z_agent.etl_quality_validator"]

@@ -1,0 +1,38 @@
+# ═══════════════════════════════════════════════════════════════════
+# ETL Quality Validation Requirements
+# Dependencies for data quality validation suite
+# ═══════════════════════════════════════════════════════════════════
+
+# Core Dependencies
+great-expectations>=0.18.0
+pandas>=2.0.0
+numpy>=1.24.0
+python-dotenv>=1.0.0
+
+# Data Processing
+openpyxl>=3.1.0
+xlsxwriter>=3.1.0
+xlrd>=2.0.1
+
+# Database Connectors (optional)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+pymysql>=1.1.0
+pyodbc>=5.0.0
+
+# Visualization
+matplotlib>=3.7.0
+plotly>=5.14.0
+seaborn>=0.12.0
+
+# Utilities
+tqdm>=4.65.0
+python-dateutil>=2.8.0
+pyyaml>=6.0
+
+# Testing (for validation)
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Logging and Monitoring
+colorlog>=6.7.0
