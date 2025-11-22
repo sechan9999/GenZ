@@ -1,0 +1,41 @@
+# COVID-19 Bayesian Nowcasting and Imputation Requirements
+# Core Dependencies
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Bayesian Modeling
+pymc>=5.10.0  # PyMC for Bayesian inference
+arviz>=0.16.0  # Bayesian diagnostics and visualization
+pytensor>=2.17.0  # PyMC backend
+
+# Statistical Imputation
+scikit-learn>=1.3.0  # For MICE and preprocessing
+statsmodels>=0.14.0  # Statistical models
+fancyimpute>=0.7.0  # Advanced imputation methods
+
+# Data Handling
+geopandas>=0.14.0  # Geographic data for census tracts
+shapely>=2.0.0  # Geometric operations
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.17.0
+
+# Census Data
+census>=0.8.19  # US Census API wrapper
+us>=3.1.1  # US state metadata
+
+# Utilities
+tqdm>=4.66.0  # Progress bars
+python-dotenv>=1.0.0  # Environment variables
+pyyaml>=6.0  # Configuration files
+joblib>=1.3.0  # Parallel processing
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Logging and Monitoring
+loguru>=0.7.0
