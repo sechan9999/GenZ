@@ -22,9 +22,22 @@ pip install -r requirements_local.txt
 
 ### 2. 스크립트 실행
 
+#### Option A: Power BI 대시보드 데모
 ```bash
 cd /home/user/GenZ/mlops_lims/examples
 python lims_quality_monitoring_local.py
+```
+
+#### Option B: MLflow 실험 추적 데모 ⭐ NEW
+```bash
+# MLflow 추가 설치
+pip install mlflow
+
+# 스크립트 실행
+python mlflow_training_demo.py
+
+# MLflow UI 확인
+mlflow ui  # http://localhost:5000
 ```
 
 ## 📁 파일 설명
@@ -44,6 +57,47 @@ python lims_quality_monitoring_local.py
 - Azure Data Factory에서 매시간 자동 실행
 - Power BI 대시보드가 Direct Query 모드로 자동 새로고침
 - 임계 실패 발생 시 이메일/Slack 알림
+
+---
+
+### `mlflow_training_demo.py` ⭐ NEW
+
+**목적**: MLflow를 사용한 LIMS 샘플 오염 탐지 모델 학습 및 추적
+
+**주요 기능**:
+1. **합성 데이터 생성**: 1,000개 LIMS 샘플 (오염률 15%)
+2. **모델 학습**: Random Forest 분류기
+3. **MLflow 추적**: 실험, 파라미터, 메트릭, 아티팩트 로깅
+4. **모델 레지스트리**: 버전 관리 및 거버넌스 태그
+5. **예측 데모**: 새 샘플에 대한 오염 확률 계산
+
+**특징**:
+- pH 레벨, 온도, 탁도, 처리 시간 기반 예측
+- 피처 중요도 분석
+- Confusion Matrix 생성
+- 고위험 샘플 자동 플래그
+
+**출력**:
+- MLflow 추적 데이터 (`./mlruns/`)
+- 피처 중요도 CSV
+- Confusion Matrix CSV
+- 분류 리포트 TXT
+- 모델 아티팩트 (재사용 가능)
+
+**MLflow UI**:
+```bash
+mlflow ui
+# 브라우저: http://localhost:5000
+```
+
+**상세 가이드**: [README_MLFLOW.md](README_MLFLOW.md)
+
+**Interview Talking Point**:
+> "Using MLflow allows me to track every single experiment.
+> If a model fails in production, I can trace it back to the exact code
+> and LIMS data snapshot that created it."
+
+---
 
 ### 출력 파일
 
