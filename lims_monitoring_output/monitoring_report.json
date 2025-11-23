@@ -1,0 +1,16 @@
+{
+  "run_timestamp": "2025-11-23T00:38:52.466705",
+  "total_samples": 50,
+  "alert_summary": {
+    "OK": 45,
+    "WARNING": 4,
+    "CRITICAL_FAILURE": 1
+  },
+  "critical_samples": [
+    "S0037"
+  ],
+  "facilities_affected": [
+    "GA_LTC_03"
+  ],
+  "data_quality_score": 90.0
+}
