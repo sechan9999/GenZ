@@ -1,0 +1,257 @@
+# Model Configuration for Medicaid Risk Prediction
+
+# Global Settings
+project_name: "Medicaid Risk Prediction"
+environment: "production"
+version: "1.0.0"
+
+# MLflow Settings
+mlflow:
+  experiment_path: "/Medicaid/Risk_Prediction_Models"
+  tracking_uri: "databricks"
+  model_registry: "databricks"
+
+# Feature Engineering Settings
+features:
+  lookback_period_days: 365
+  recent_period_days: 90
+  prior_period_days: 275
+
+  # Feature categories
+  demographic_features:
+    - age
+    - eligibility_years
+    - dual_eligible
+    - ltss_indicator
+    - high_risk_flag
+    - gender_encoded
+
+  chronic_condition_features:
+    - has_diabetes
+    - has_hypertension
+    - has_copd_asthma
+    - has_heart_failure
+    - has_ckd
+    - has_mental_health
+    - has_obesity
+    - has_cancer
+    - chronic_condition_count
+
+  utilization_features:
+    - claim_count_12mo
+    - service_days_12mo
+    - er_visit_count_12mo
+    - inpatient_admit_count_12mo
+    - high_cost_claim_count
+    - unique_provider_count
+    - rx_fill_count_12mo
+    - unique_drug_count
+    - controlled_substance_count
+
+  temporal_features:
+    - recent_claim_count_90d
+    - claim_count_trend_pct
+    - cost_trend_pct
+    - days_since_last_medical_claim
+    - days_since_last_er_visit
+    - days_since_last_rx_fill
+
+  cost_features:
+    - total_paid_12mo
+    - avg_claim_amount
+    - total_rx_paid_12mo
+    - avg_rx_cost
+
+# Model Configurations
+models:
+  er_utilization_predictor:
+    type: "classifier"
+    algorithm: "RandomForest"
+    target: "high_er_utilization"
+    target_definition: "er_visit_count_12mo >= 3"
+    hyperparameters:
+      n_estimators: 100
+      max_depth: 10
+      min_samples_split: 20
+      random_state: 42
+    performance_threshold:
+      min_auc: 0.70
+      min_precision: 0.60
+    registered_model_name: "er_utilization_predictor"
+
+  high_cost_predictor:
+    type: "classifier"
+    algorithm: "GradientBoosting"
+    target: "high_cost"
+    target_definition: "total_paid_12mo >= 25000"
+    hyperparameters:
+      n_estimators: 100
+      max_depth: 5
+      learning_rate: 0.1
+      random_state: 42
+    performance_threshold:
+      min_auc: 0.75
+      min_precision: 0.65
+    registered_model_name: "high_cost_predictor"
+
+  total_cost_predictor:
+    type: "regressor"
+    algorithm: "GradientBoostingRegressor"
+    target: "total_cost"
+    hyperparameters:
+      n_estimators: 150
+      max_depth: 6
+      learning_rate: 0.05
+      random_state: 42
+    performance_threshold:
+      min_r2: 0.60
+      max_rmse: 15000
+    registered_model_name: "total_cost_predictor"
+
+  high_risk_predictor:
+    type: "classifier"
+    algorithm: "LogisticRegression"
+    target: "high_risk"
+    target_definition: "risk_tier IN ('High', 'Medium')"
+    hyperparameters:
+      C: 1.0
+      max_iter: 1000
+      random_state: 42
+    performance_threshold:
+      min_auc: 0.70
+      min_recall: 0.70
+    registered_model_name: "high_risk_predictor"
+
+# Training Settings
+training:
+  test_size: 0.2
+  random_state: 42
+  stratify: true
+  cross_validation:
+    enabled: false
+    n_folds: 5
+
+  # Scaling
+  feature_scaling:
+    enabled: true
+    method: "StandardScaler"
+
+# MLOps Settings
+mlops:
+  # Model monitoring
+  monitoring:
+    enabled: true
+    drift_check_frequency: "daily"
+    performance_check_frequency: "weekly"
+    drift_threshold_pct: 10.0
+
+  # Retraining
+  retraining:
+    enabled: true
+    schedule: "monthly"
+    auto_promote: false
+    validation_required: true
+
+  # Model lifecycle
+  model_lifecycle:
+    staging_validation_days: 7
+    production_rollback_enabled: true
+    max_production_age_days: 90
+
+# Immunization Targeting Settings
+immunization:
+  priority_scoring:
+    immunization_weight: 0.4
+    high_risk_weight: 0.3
+    er_utilization_weight: 0.2
+    cost_risk_weight: 0.1
+
+  tier_thresholds:
+    tier1_min_score: 80  # Immediate
+    tier2_min_score: 60  # High Priority
+    tier3_min_score: 40  # Standard
+    # < 40 = Tier 4 Routine
+
+  outreach_methods:
+    tier1: "Phone Call + Letter"
+    tier2: "Phone Call"
+    tier3: "Letter"
+    tier4: "Email/Portal Message"
+
+  estimated_preventable_costs:
+    flu_with_high_er: 3500
+    pneumococcal_with_chronic: 5000
+    default: 1500
+
+  uptake_assumptions:
+    high_priority_uptake: 0.40  # 40%
+    standard_uptake: 0.20       # 20%
+
+  eligibility_rules:
+    flu:
+      - "age >= 65"
+      - "chronic_condition_count >= 1"
+    pneumococcal:
+      - "age >= 65"
+      - "has_diabetes = 1"
+      - "has_copd_asthma = 1"
+      - "has_heart_failure = 1"
+    shingles:
+      - "age >= 50"
+    hpv:
+      - "age >= 19 AND age <= 26"
+
+# Data Quality Settings
+data_quality:
+  min_quality_score: 0.70
+  required_fields:
+    member_features:
+      - member_id
+      - age
+      - chronic_condition_count
+      - claim_count_12mo
+  validation_rules:
+    - "age >= 0 AND age <= 120"
+    - "chronic_condition_count >= 0 AND chronic_condition_count <= 10"
+    - "total_paid_12mo >= 0"
+
+# Notification Settings
+notifications:
+  email:
+    enabled: true
+    recipients:
+      data_team: ["data-team@example.com"]
+      ml_team: ["ml-team@example.com"]
+      analytics_team: ["analytics-team@example.com"]
+
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channels:
+      alerts: "#medicaid-alerts"
+      monitoring: "#ml-monitoring"
+
+# Performance Optimization
+optimization:
+  delta_optimize:
+    enabled: true
+    frequency: "daily"
+
+  z_ordering:
+    member_features: ["member_id"]
+    medical_claims: ["member_id", "claim_date"]
+    pharmacy_claims: ["member_id", "fill_date"]
+
+  caching:
+    enabled: true
+    tables:
+      - "gold.member_features"
+      - "gold.member_risk_predictions"
+
+# Export Settings
+exports:
+  outreach_lists:
+    format: "csv"
+    destination: "/dbfs/mnt/medicaid/outreach_exports"
+    compression: "gzip"
+    include_pii: false  # Anonymize for external sharing
