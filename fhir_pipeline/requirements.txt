@@ -1,0 +1,43 @@
+# FHIR Pipeline Production Dependencies
+# For running on Azure Databricks or Azure Synapse Analytics
+
+# Core PySpark and Delta Lake
+pyspark>=3.2.0
+delta-spark>=2.0.0
+
+# Azure SDKs
+azure-eventhub>=5.11.0
+azure-storage-blob>=12.14.0
+azure-identity>=1.12.0
+azure-keyvault-secrets>=4.6.0
+
+# Azure Machine Learning
+azureml-core>=1.48.0
+azureml-mlflow>=1.48.0
+azureml-sdk>=1.48.0
+
+# MLflow for experiment tracking
+mlflow>=2.9.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Logging and monitoring
+applicationinsights>=0.11.10
+
+# Optional: For local development/testing
+# jupyter>=1.0.0
+# matplotlib>=3.7.0
+# seaborn>=0.12.0
+
+# Note: In Databricks, many packages are pre-installed
+# Use Databricks Runtime ML for automatic MLflow/scikit-learn
