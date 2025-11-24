@@ -1,0 +1,16 @@
+# Core Dependencies
+pyspark>=3.4.0
+delta-spark>=2.4.0
+
+# Configuration
+pyyaml>=6.0
+
+# Logging and Monitoring
+python-json-logger>=2.0.7
+
+# External API Integration (examples)
+requests>=2.31.0
+
+# Development Dependencies (optional)
+pytest>=7.4.0
+pytest-spark>=0.6.0

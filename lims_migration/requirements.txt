@@ -1,0 +1,26 @@
+# LIMS Migration Solution Dependencies
+
+# Core Dependencies
+pyspark>=3.4.0
+delta-spark>=2.4.0
+
+# JDBC Drivers (install separately on Databricks)
+# - SQL Server: com.microsoft.azure:spark-mssql-connector_2.12:1.2.0
+# - Oracle: ojdbc8
+# - MySQL: mysql-connector-java
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Azure SDK (for storage access)
+azure-storage-blob>=12.19.0
+azure-identity>=1.15.0
+
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Development and Testing
+pytest>=7.4.0
+pytest-spark>=0.6.0
