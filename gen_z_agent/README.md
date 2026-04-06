@@ -265,7 +265,6 @@ sudo apt-get install poppler-utils
 
 ## 📞 지원 및 문의
 
-- **GitHub Issues**: https://github.com/sechan9999/GenZ/issues
 - **Email**: 18project18@gmail.com
 
 ## 🎯 로드맵
